@@ -26,6 +26,14 @@ const CHAOS_LABELS = [
   "screaming void",
 ];
 
+function isChaosLabel(breed: string) {
+  return CHAOS_LABELS.includes(breed);
+}
+
+function ChaosMarker() {
+  return <span title="Magic Conch guess, doesn't actually look at the photo!">🎲 </span>;
+}
+
 function engineName(eng: Engine) {
   if (eng === "google") return "Google AI";
   if (eng === "chaos") return "Magic Conch";
@@ -131,6 +139,7 @@ export default function Home() {
   const [userHfKey, setUserHfKey] = useState("");
   const [userElevenLabsKey, setUserElevenLabsKey] = useState("");
   const [elevenLabsQuota, setElevenLabsQuota] = useState<{ used: number; limit: number } | null>(null);
+  const [projectQuota, setProjectQuota] = useState<{ used: number; limit: number } | null>(null);
   const [voiceFailed, setVoiceFailed] = useState(false);
   const [suggestion, setSuggestion] = useState("");
   const [suggestionSent, setSuggestionSent] = useState(false);
@@ -252,6 +261,12 @@ export default function Home() {
   useEffect(() => {
     refreshLeaderboard();
     refreshStats();
+    fetch("/api/elevenlabs-quota", { method: "POST", headers: { "Content-Type": "application/json" }, body: "{}" })
+      .then((res) => res.json())
+      .then((data) => {
+        if (typeof data.used === "number") setProjectQuota({ used: data.used, limit: data.limit });
+      })
+      .catch(() => {});
   }, []);
 
   // Warm up the on-device classifier so switching engines is instant.
@@ -548,7 +563,7 @@ export default function Home() {
   return (
     <main className="min-h-screen flex flex-col items-center justify-center gap-6 p-8">
       <h1 className="text-2xl font-bold">Pic to Bark</h1>
-      <p className="text-zinc-500 text-center max-w-sm">
+      <p className="text-zinc-500 text-center max-w-sm md:max-w-md">
         Upload a photo of your dog and hear what (s)he is thinking.
       </p>
 
@@ -575,7 +590,7 @@ export default function Home() {
 
         {preview && (
           // eslint-disable-next-line @next/next/no-img-element
-          <img ref={imgRef} src={preview} alt="preview" className="max-w-xs rounded" />
+          <img ref={imgRef} src={preview} alt="preview" className="max-w-xs md:max-w-sm rounded" />
         )}
       </div>
 
@@ -589,7 +604,7 @@ export default function Home() {
         </p>
       )}
 
-      <div className="flex gap-4 w-full max-w-sm">
+      <div className="flex gap-4 w-full max-w-sm md:max-w-md">
         <label className="flex flex-col items-center gap-1 text-sm text-zinc-600 flex-1 min-w-0">
           breed detection
           <select
@@ -641,13 +656,13 @@ export default function Home() {
       </div>
 
       {fallbackTo && (
-        <p className="text-xs text-zinc-500 text-center max-w-xs">
+        <p className="text-xs text-zinc-500 text-center max-w-xs md:max-w-sm">
           {engineName(engine)} was unavailable, used {engineName(fallbackTo)} instead
         </p>
       )}
 
       {revealMode && predictions && (
-        <div className="text-xs text-zinc-500 border border-dashed rounded px-3 py-2 w-full max-w-xs">
+        <div className="text-xs text-zinc-500 border border-dashed rounded px-3 py-2 w-full max-w-xs md:max-w-sm">
           <p className="font-medium mb-1">{engineName(fallbackTo ?? engine)} says:</p>
           {typeof timing === "number" && <p className="mb-1">answered in {timing}ms</p>}
           <ul>
@@ -661,7 +676,13 @@ export default function Home() {
         </div>
       )}
 
-      <details className="text-sm text-zinc-500 w-full max-w-xs">
+      {projectQuota && (
+        <p className="text-xs text-zinc-400">
+          project ElevenLabs quota: {projectQuota.used} / {projectQuota.limit} characters used
+        </p>
+      )}
+
+      <details className="text-sm text-zinc-500 w-full max-w-xs md:max-w-sm">
         <summary className="cursor-pointer text-center">Use your own API keys (mine run out fast!)</summary>
         <div className="flex flex-col gap-2 mt-2">
           <div className="text-xs">
@@ -742,7 +763,7 @@ export default function Home() {
       {error && <p className="text-red-600">{error}</p>}
 
       {caption && (
-        <div key={caption} className="wag-in flex flex-col items-center gap-3 max-w-sm text-center">
+        <div key={caption} className="wag-in flex flex-col items-center gap-3 max-w-sm md:max-w-md text-center">
           <p className="text-lg italic">&quot;{caption}&quot;</p>
           <button onClick={copyCaption} className="text-xs underline text-zinc-400">
             {copied ? "copied!" : "copy"}
@@ -782,11 +803,12 @@ export default function Home() {
       )}
 
       {leaderboard.length > 0 && (
-        <div className="text-sm text-zinc-500 text-center">
-          <p className="font-medium">most guessed breeds so far</p>
+        <div className="text-sm text-zinc-500 text-center border-t border-zinc-100 pt-4 w-full max-w-sm md:max-w-md">
+          <p className="font-semibold text-zinc-700 mb-1">Leaderboard (most guessed breeds so far)</p>
           <ol>
             {leaderboard.map((entry) => (
               <li key={entry.breed}>
+                {isChaosLabel(entry.breed) && <ChaosMarker />}
                 {entry.breed} ({entry.count})
               </li>
             ))}
@@ -795,8 +817,8 @@ export default function Home() {
       )}
 
       {stats && stats.total > 0 && (
-        <div className="text-sm text-zinc-500 text-center">
-          <p className="font-medium">stats</p>
+        <div className="text-sm text-zinc-500 text-center border-t border-zinc-100 pt-4 w-full max-w-sm md:max-w-md">
+          <p className="font-semibold text-zinc-700 mb-1">Stats</p>
           <p>
             {stats.total} translations, {stats.uniqueBreeds} unique breeds
           </p>
@@ -808,8 +830,8 @@ export default function Home() {
       )}
 
       {punchlines.length > 0 && (
-        <div className="text-sm text-zinc-500 text-center">
-          <p className="font-medium">punchline distribution</p>
+        <div className="text-sm text-zinc-500 text-center border-t border-zinc-100 pt-4 w-full max-w-sm md:max-w-md">
+          <p className="font-semibold text-zinc-700 mb-1">Punchline distribution</p>
           <ul>
             {punchlines.map((p) => (
               <li key={p.punchline}>
@@ -821,10 +843,10 @@ export default function Home() {
       )}
 
       {hourly.length > 0 && (
-        <div className="text-sm text-zinc-500 text-center w-full max-w-sm">
-          <p className="font-medium mb-1">translations per hour</p>
+        <div className="text-sm text-zinc-500 text-center border-t border-zinc-100 pt-4 w-full max-w-sm md:max-w-md">
+          <p className="font-semibold text-zinc-700 mb-1">Translations per hour</p>
           <div className="flex flex-col gap-1">
-            {hourly.slice(-24).map((h) => (
+            {hourly.map((h) => (
               <div key={h.hour} className="flex items-center gap-2 text-xs">
                 <span className="w-32 text-right shrink-0">{h.hour}</span>
                 <div className="flex-1 bg-zinc-100 h-3 rounded">
@@ -841,11 +863,12 @@ export default function Home() {
       )}
 
       {recent.length > 0 && (
-        <div className="text-sm text-zinc-500 text-center max-w-sm">
-          <p className="font-medium">recent translations</p>
+        <div className="text-sm text-zinc-500 text-center border-t border-zinc-100 pt-4 w-full max-w-sm md:max-w-md">
+          <p className="font-semibold text-zinc-700 mb-1">Recent translations</p>
           <ul>
             {recent.map((r, i) => (
               <li key={i}>
+                {isChaosLabel(r.breed) && <ChaosMarker />}
                 {r.breed}: &quot;{r.caption}&quot;
               </li>
             ))}
@@ -853,8 +876,8 @@ export default function Home() {
         </div>
       )}
 
-      <div className="text-sm text-zinc-500 text-center w-full max-w-sm">
-        <p className="font-medium">Suggestions for improvements</p>
+      <div className="text-sm text-zinc-500 text-center border-t border-zinc-100 pt-4 w-full max-w-sm md:max-w-md">
+        <p className="font-semibold text-zinc-700 mb-1">Suggestions for improvements</p>
         {suggestionSent ? (
           <p className="text-xs">Thanks, noted!</p>
         ) : (

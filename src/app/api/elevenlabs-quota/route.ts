@@ -1,14 +1,16 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getClientIp, isRateLimited } from "@/lib/rateLimit";
 
-// reads the caller's own ElevenLabs quota, the key is only used for this one
-// lookup and never stored or logged
+// reads an ElevenLabs quota. With a key in the body, it's the caller's own,
+// used only for this one lookup and never stored or logged. Without one, it
+// falls back to the project's own key, so the app can show its own quota.
 export async function POST(req: NextRequest) {
   if (isRateLimited(getClientIp(req))) {
     return NextResponse.json({ error: "slow down a bit, try again in a few minutes" }, { status: 429 });
   }
 
-  const { key } = await req.json();
+  const { key: userKey } = await req.json();
+  const key = userKey || process.env.ELEVENLABS_API_KEY;
   if (!key) {
     return NextResponse.json({ error: "missing key" }, { status: 400 });
   }

@@ -2,7 +2,7 @@
 
 Upload a photo of your dog. It figures out the breed, comes up with a line of what the dog is probably thinking, and reads it out loud in a voice you pick.
 
-Built for the DEV Weekend Challenge, Dog Days edition.
+Built for the DEV Weekend Challenge, Dog Days edition. Going for the Snowflake, ElevenLabs, and Google AI bonus categories.
 
 ## How it works
 

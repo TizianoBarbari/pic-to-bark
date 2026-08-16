@@ -240,10 +240,14 @@ export async function getHourlyTrend(): Promise<HourlyCount[]> {
     const rows = await withTimeout(
       execute(
         connection,
-        `SELECT TO_VARCHAR(DATE_TRUNC('hour', created_at), 'YYYY-MM-DD HH24:MI') AS hour, COUNT(*) AS count
-         FROM translations
-         GROUP BY hour
-         ORDER BY hour`
+        `SELECT hour, count FROM (
+           SELECT TO_VARCHAR(DATE_TRUNC('hour', created_at), 'YYYY-MM-DD HH24:MI') AS hour, COUNT(*) AS count
+           FROM translations
+           GROUP BY hour
+           ORDER BY hour DESC
+           LIMIT 24
+         )
+         ORDER BY hour ASC`
       ),
       "hourly trend query"
     );
